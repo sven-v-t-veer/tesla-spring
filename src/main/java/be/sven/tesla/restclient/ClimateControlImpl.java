@@ -1,9 +1,11 @@
 package be.sven.tesla.restclient;
 
 import be.sven.tesla.json.GenericWrapper;
-import be.sven.tesla.model.*;
+import be.sven.tesla.model.Response;
+import be.sven.tesla.model.Seat;
+import be.sven.tesla.model.SeatHeaterLevel;
+import be.sven.tesla.model.Token;
 import be.sven.tesla.spi.ClimateControl;
-import com.neovisionaries.ws.client.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,10 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Component
