@@ -11,4 +11,9 @@ public enum Seat {
         this.id = id;
     }
     private int id;
+
+    @Override
+    public String toString() {
+        return String.valueOf(id);
+    }
 }

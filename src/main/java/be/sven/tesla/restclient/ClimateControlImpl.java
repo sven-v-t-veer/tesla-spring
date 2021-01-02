@@ -1,7 +1,5 @@
 package be.sven.tesla.restclient;
 
-import be.sven.tesla.json.GenericWrapper;
-import be.sven.tesla.model.Response;
 import be.sven.tesla.model.Seat;
 import be.sven.tesla.model.SeatHeaterLevel;
 import be.sven.tesla.model.Token;
@@ -9,8 +7,7 @@ import be.sven.tesla.spi.ClimateControl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -19,17 +16,17 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Component
-public class ClimateControlImpl implements ClimateControl {
+public class ClimateControlImpl extends CommandRestClient implements ClimateControl {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ClimateControlImpl.class);
 
-    private final RestTemplate template;
+
     private final HttpHeadersBuilder headersBuilder;
     private final UrlBuilder urlBuilder;
 
     @Autowired
     public ClimateControlImpl(RestTemplate template, HttpHeadersBuilder headersBuilder, UrlBuilder urlBuilder) {
-        this.template = template;
+        super(template);
         this.headersBuilder = headersBuilder;
         this.urlBuilder = urlBuilder;
     }
@@ -54,38 +51,37 @@ public class ClimateControlImpl implements ClimateControl {
         Map<String, String> params = new HashMap<>();
         params.put("driver_temp", temp.toPlainString());
         params.put("passenger_temp", temp.toPlainString());
-        String url = urlBuilder.buildUrl(id, Command.CLIMATE_SET_TEMP);
+        String url = urlBuilder.buildUrl(id, Command.CLIMATE_SET_TEMP, params);
         return exchange(headers, url);
     }
 
     @Override
     public boolean defrost(Token token, Long id, boolean on) {
-        return false;
+        HttpHeaders headers = headersBuilder.getHeaders(token);
+        Map<String, String> params = new HashMap<>();
+        params.put("on", String.valueOf(on));
+        String url = urlBuilder.buildUrl(id, Command.CLIMATE_DEFROST, params);
+        return exchange(headers, url);
     }
 
     @Override
     public boolean seatHeater(Token token, Long id, Seat seat, SeatHeaterLevel level) {
-        return false;
+        HttpHeaders headers = headersBuilder.getHeaders(token);
+        Map<String, String> params = new HashMap<>();
+        params.put("level", String.valueOf(level.ordinal()));
+        params.put("heater", seat.toString());
+        String url = urlBuilder.buildUrl(id, Command.CLIMATE_SEAT_HEATER, params);
+        return exchange(headers, url);
     }
 
     @Override
     public boolean steeringWheelHeater(Token token, Long id, boolean on) {
-        return false;
+        HttpHeaders headers = headersBuilder.getHeaders(token);
+        Map<String, String> params = new HashMap<>();
+        params.put("on", String.valueOf(on));
+        String url = urlBuilder.buildUrl(id, Command.CLIMATE_STEERING_WHEEL, params);
+        return exchange(headers, url);
     }
 
-    private boolean exchange(HttpHeaders headers, String url) {
-        ResponseEntity<GenericWrapper<Response>> responseEntity = template.exchange(url, HttpMethod.POST, new HttpEntity<>("", headers),
-                new ParameterizedTypeReference<GenericWrapper<Response>>() {});
-        if (responseEntity.getStatusCode() == HttpStatus.OK) {
-            GenericWrapper<Response> response = responseEntity.getBody();
-            LOGGER.info("----------------------------------- {}", responseEntity.getStatusCode());
-            if (response != null) {
-                LOGGER.info("Url: {} - Response: {} ", url, response.getResponse());
-                return response.getResponse().isResult();
-            }
-            LOGGER.info("Url: {} - Response was null ", url);
-        }
-        LOGGER.error("Error calling {}: {}", url, responseEntity.getStatusCode());
-        return false;
-    }
+
 }
