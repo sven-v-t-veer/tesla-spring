@@ -3,6 +3,7 @@ package be.sven.tesla.restclient;
 import be.sven.tesla.model.Token;
 import be.sven.tesla.model.Vehicle;
 import be.sven.tesla.spi.VehicleControl;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -32,24 +33,39 @@ public class VehicleControlImpl extends CommandRestClient implements VehicleCont
 
     @Override
     public boolean honkHorn(Token token, Long id) {
-        HttpHeaders headers = headersBuilder.getHeaders(token);
-        String url = urlBuilder.buildUrl(id, Command.HONK_HORN);
-        return exchange(headers, url);
+        try {
+            HttpHeaders headers = headersBuilder.getHeaders(token);
+            String url = urlBuilder.buildUrl(id, Command.HONK_HORN);
+            return exchange(headers, url, null);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     @Override
     public boolean flashLights(Token token, Long id) {
-        HttpHeaders headers = headersBuilder.getHeaders(token);
-        String url = urlBuilder.buildUrl(id, Command.FLASH_LIGHTS);
-        return exchange(headers, url);
+        try {
+            HttpHeaders headers = headersBuilder.getHeaders(token);
+            String url = urlBuilder.buildUrl(id, Command.FLASH_LIGHTS);
+            return exchange(headers, url, null);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     @Override
     public boolean remoteStart(Token token, Long id, String password) {
-        HttpHeaders headers = headersBuilder.getHeaders(token);
-        Map<String, String> params = new HashMap<>();
-        params.put("password", password);
-        String url = urlBuilder.buildUrl(id, Command.REMOTE_START_DRIVE, params);
-        return exchange(headers, url);
+        try {
+            HttpHeaders headers = headersBuilder.getHeaders(token);
+            Map<String, String> params = new HashMap<>();
+            params.put("password", password);
+            String url = urlBuilder.buildUrl(id, Command.REMOTE_START_DRIVE, params);
+            return exchange(headers, url, null);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 }

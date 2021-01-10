@@ -48,15 +48,26 @@ public class VehicleClientImpl implements VehicleClient {
 
 
     @Override
-    public Vehicle getVehicle(Token token, Long id) {
+    public Vehicle getVehicle(Token token, Long id) { //408 REQUEST_TIMEOUT the car is asleep
         HttpHeaders headers = headersBuilder.getHeaders(token);
         String url = urlBuilder.buildUrl(id);
         ResponseEntity<GenericWrapper<Vehicle>> response = template.exchange(url, HttpMethod.GET,
                 new HttpEntity<>("", headers), new ParameterizedTypeReference<GenericWrapper<Vehicle>>() {});
-        GenericWrapper<Vehicle> wrapper = response.getBody();
         LOGGER.info("----------------------------------- {}", response.getStatusCode());
-        LOGGER.info("Vehicle: {}", wrapper);
-        return wrapper.getResponse();
+        if (response != null) {
+            if (response.getStatusCode() == HttpStatus.OK) {
+                GenericWrapper<Vehicle> wrapper = response.getBody();
+                LOGGER.info("Vehicle: {}", wrapper);
+                if (wrapper == null) {
+                    //throw an exception here.
+                }
+                return wrapper.getResponse();
+            }
+            if (response.getStatusCode() == HttpStatus.REQUEST_TIMEOUT) {
+                // car is asleep?
+            }
+        }
+        return null;
     }
 
 }

@@ -3,17 +3,21 @@ package be.sven.tesla.restclient;
 import be.sven.tesla.json.GenericWrapper;
 import be.sven.tesla.model.Response;
 import be.sven.tesla.model.Vehicle;
-import be.sven.tesla.model.VehicleData;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
-import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.Map;
 
 public class CommandRestClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CommandRestClient.class);
+
+    private static final ObjectMapper mapper = new ObjectMapper();
 
     private final RestTemplate template;
 
@@ -21,19 +25,23 @@ public class CommandRestClient {
         this.template = template;
     }
 
-    protected boolean exchange(HttpHeaders headers, String url) {
-        ResponseEntity<GenericWrapper<Response>> responseEntity = template.exchange(url, HttpMethod.POST, new HttpEntity<>("", headers),
+    protected boolean exchange(HttpHeaders headers, String url, Map<String , String> params) throws JsonProcessingException {
+        String body = "";
+        if (params != null && !params.isEmpty()) {
+            body = mapper.writeValueAsString(mapper.valueToTree(params));
+        }
+        ResponseEntity<GenericWrapper<Response>> responseEntity = template.exchange(url, HttpMethod.POST, new HttpEntity<>(body, headers),
                 new ParameterizedTypeReference<GenericWrapper<Response>>() {});
         if (responseEntity.getStatusCode() == HttpStatus.OK) {
             GenericWrapper<Response> response = responseEntity.getBody();
             LOGGER.info("----------------------------------- {}", responseEntity.getStatusCode());
             if (response != null) {
-                LOGGER.info("Url: {} - Response: {} ", url, response.getResponse());
+                LOGGER.info("Url: {} - body: {} - Response: {} ", url, body, response.getResponse());
                 return response.getResponse().isResult();
             }
-            LOGGER.info("Url: {} - Response was null ", url);
+            LOGGER.info("Url: {} - body {} - Response was null ", url, body);
         }
-        LOGGER.error("Error calling {}: {}", url, responseEntity.getStatusCode());
+        LOGGER.error("Error calling {} with body {} : {}", url, body, responseEntity.getStatusCode());
         return false;
     }
 

@@ -1,11 +1,19 @@
 package be.sven.tesla.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
+import org.springframework.data.redis.core.RedisHash;
+
+import javax.persistence.Id;
 
 @Data
+@RedisHash("Token")
 public class Token {
 
+    @Id
+    @JsonIgnore
+    private Integer id;
     @JsonProperty("access_token")
     private String accessToken;
     @JsonProperty("token_type")
