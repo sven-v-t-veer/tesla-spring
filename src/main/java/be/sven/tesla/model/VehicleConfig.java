@@ -1,10 +1,18 @@
 package be.sven.tesla.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
+import javax.persistence.Entity;
+import javax.persistence.Id;
+
 @Data
+@Entity
 public class VehicleConfig {
+    @Id
+    @JsonIgnore
+    private Long id;
     @JsonProperty("can_accept_navigation_requests")
     private boolean canAcceptNavigationRequests;
     @JsonProperty("can_actuate_trunks")

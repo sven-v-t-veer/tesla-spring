@@ -3,10 +3,13 @@ package be.sven.tesla.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
+import javax.persistence.*;
 import java.util.List;
 
 @Data
+//@Entity
 public class VehicleData {
+    @Id
     @JsonProperty("id")
     private Long id;
     @JsonProperty("vehicle_id")
@@ -20,6 +23,8 @@ public class VehicleData {
     @JsonProperty("color")
     private String color;
     @JsonProperty("tokens")
+    @ElementCollection
+    @CollectionTable(name="vehicle_tokens")
     private List<String> tokens;
     @JsonProperty("state")
     private String state;
