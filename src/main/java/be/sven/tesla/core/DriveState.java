@@ -39,4 +39,11 @@ public class DriveState {
     private Integer speed;
     @JsonProperty("timestamp")
     private long timestamp;
+
+    public boolean isParked() {
+        if ((getSpeed() == null && getShiftState() == null) || (getShiftState() != null && "P".equals(getShiftState()))) {
+            return true;
+        }
+        return false;
+    }
 }
