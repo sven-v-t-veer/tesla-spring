@@ -1,6 +1,6 @@
 package be.sven.tesla.service;
 
-import be.sven.tesla.model.AppUser;
+import be.sven.tesla.core.AppUser;
 
 import java.util.Optional;
 

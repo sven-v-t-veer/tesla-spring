@@ -1,6 +1,6 @@
 package be.sven.tesla.streaming;
 
-import be.sven.tesla.model.Token;
+import be.sven.tesla.core.Token;
 import com.neovisionaries.ws.client.*;
 
 import java.nio.charset.StandardCharsets;
