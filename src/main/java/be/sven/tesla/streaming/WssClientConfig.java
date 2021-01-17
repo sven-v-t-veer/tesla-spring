@@ -2,6 +2,8 @@ package be.sven.tesla.streaming;
 
 import be.sven.tesla.core.Token;
 import com.neovisionaries.ws.client.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -10,24 +12,28 @@ import java.util.Map;
 
 public class WssClientConfig {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(WssClientConfig.class);
+
+    private boolean subscribed = false;
+
     public WebSocket createSocket(Token token, Long id, boolean on) {
-        System.out.println("*****************************************************");
+        LOGGER.info("*************  CREATING WEBSOCKET ****************************************");
         try {
             new WebSocketFactory().createSocket("wss://streaming.vn.teslamotors.com/streaming/").addListener(new WebSocketListener() {
 
                 @Override
                 public void onTextMessage(WebSocket websocket, String text) throws Exception {
-                    System.out.println("Message: " + text);
+                    LOGGER.info("onTextMessage: {}", text);
                 }
 
                 @Override
                 public void onStateChanged(WebSocket websocket, WebSocketState newState) throws Exception {
-
+                    LOGGER.info("OnStateChanged {} ", newState);
                 }
 
                 @Override
                 public void onConnected(WebSocket websocket, Map<String, List<String>> headers) throws Exception {
-                    System.out.println("Connected: " + headers);
+                    LOGGER.info("onConnected: {}", headers);
                     websocket.sendText("{\n" +
                             "    \"msg_type\": \"data:subscribe\",\n" +
                             "    \"tag\":" + id + ",\n" +
@@ -38,59 +44,61 @@ public class WssClientConfig {
 
                 @Override
                 public void onConnectError(WebSocket websocket, WebSocketException cause) throws Exception {
-                    System.out.println("Error: " + cause);
+                    LOGGER.info("onConnectError.",  cause);
                 }
 
                 @Override
                 public void onDisconnected(WebSocket websocket, WebSocketFrame serverCloseFrame, WebSocketFrame clientCloseFrame, boolean closedByServer) throws Exception {
-
+                    LOGGER.info("onDisconnected: by Server {}", closedByServer);
                 }
 
                 @Override
                 public void onFrame(WebSocket websocket, WebSocketFrame frame) throws Exception {
-
+                    LOGGER.info("onFrame: {} ", frame);
                 }
 
                 @Override
                 public void onContinuationFrame(WebSocket websocket, WebSocketFrame frame) throws Exception {
-
+                    LOGGER.info("onContinuationFrame: {}", frame);
                 }
 
                 @Override
                 public void onTextFrame(WebSocket websocket, WebSocketFrame frame) throws Exception {
-                    System.out.println("Frame: " + frame);
+                    LOGGER.info("onTextFrame: {}", frame);
                 }
 
                 @Override
                 public void onBinaryFrame(WebSocket websocket, WebSocketFrame frame) throws Exception {
-
+                    LOGGER.info("onBinaryFrame: {}", frame);
                 }
 
                 @Override
                 public void onCloseFrame(WebSocket websocket, WebSocketFrame frame) throws Exception {
-
+                    LOGGER.info("onCloseFrame: {}", frame);
                 }
 
                 @Override
                 public void onPingFrame(WebSocket websocket, WebSocketFrame frame) throws Exception {
-
+                    LOGGER.info("onPingFrame: " + frame);
                 }
 
                 @Override
                 public void onPongFrame(WebSocket websocket, WebSocketFrame frame) throws Exception {
-
+                    LOGGER.info("onPongFrame: {}", frame);
                 }
 
                 @Override
                 public void onTextMessage(WebSocket websocket, byte[] data) throws Exception {
-                    System.out.println("Text: " + data);
+                    LOGGER.info("onTextMessage: {}", data);
                 }
 
                 @Override
                 public void onBinaryMessage(WebSocket websocket, byte[] binary) throws Exception {
-                    String message = "{\"msg_type\": \"data:subscribe\",\"tag\":" + id + ",\"token\": \"" + token.getAccessToken() + "\", \"value\": \"power,shift_state,range,est_range,heading\"}";
-                    System.out.println("Binary : " + new String(binary, StandardCharsets.UTF_8));
-                    websocket.sendBinary(message.getBytes(StandardCharsets.UTF_8));
+                    LOGGER.info("onBinaryMessage : {}" + new String(binary, StandardCharsets.UTF_8));
+                    if (!subscribed) {
+                        String subscribe = "{\"msg_type\": \"data:subscribe\",\"tag\":" + id + ",\"token\": \"" + token.getAccessToken() + "\", \"value\": \"power,shift_state,range,est_range,heading\"}";
+                        websocket.sendBinary(subscribe.getBytes(StandardCharsets.UTF_8));
+                    }
                 }
 
                 @Override
@@ -125,7 +133,7 @@ public class WssClientConfig {
 
                 @Override
                 public void onError(WebSocket websocket, WebSocketException cause) throws Exception {
-                    System.out.println("error: " + cause);
+                    LOGGER.info("onError.", cause);
                 }
 
                 @Override
@@ -135,8 +143,8 @@ public class WssClientConfig {
 
                 @Override
                 public void onMessageError(WebSocket websocket, WebSocketException cause, List<WebSocketFrame> frames) throws Exception {
-                    System.out.println("Message Error: " + cause);
-                    System.out.println("Frames: " + frames);
+                    LOGGER.info("onMessageError", cause);
+                    frames.forEach(f -> LOGGER.info("Frame: {}", f));
                 }
 
                 @Override
@@ -146,14 +154,14 @@ public class WssClientConfig {
 
                 @Override
                 public void onTextMessageError(WebSocket websocket, WebSocketException cause, byte[] data) throws Exception {
-                    System.out.println("Text Message Error: " + cause);
-                    System.out.println("Frames: " + data);
+                    LOGGER.info("onTextMessageError: ", cause);
+                    LOGGER.info("onTextMessageError : {}", new String(data, StandardCharsets.UTF_8));
                 }
 
                 @Override
                 public void onSendError(WebSocket websocket, WebSocketException cause, WebSocketFrame frame) throws Exception {
-                    System.out.println("Send Error: " + cause);
-                    System.out.println("Frames: " + frame);
+                    LOGGER.info("onSendError: ", cause);
+                    LOGGER.info("onSendError : {}", frame);
                 }
 
                 @Override
@@ -168,8 +176,8 @@ public class WssClientConfig {
 
                 @Override
                 public void onSendingHandshake(WebSocket websocket, String requestLine, List<String[]> headers) throws Exception {
-                    System.out.println("Sending Handshake: " + requestLine);
-                    headers.forEach(h -> Arrays.toString(h));
+                    LOGGER.info("onSendingHandshake: {}", requestLine);
+                    headers.forEach(h -> LOGGER.info("Header: {}", Arrays.toString(h)));
                 }
             }).connect();
         } catch (Exception ex) {

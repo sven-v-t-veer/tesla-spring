@@ -1,14 +1,14 @@
 package be.sven.tesla.restclient.provider;
 
-import be.sven.tesla.core.ChargingState;
-import be.sven.tesla.core.DriveState;
-import be.sven.tesla.core.Token;
-import be.sven.tesla.core.VehicleData;
+import be.sven.tesla.core.*;
 import be.sven.tesla.exception.InvalidParameterException;
 import be.sven.tesla.exception.TaskNotFoundException;
+import be.sven.tesla.restclient.DataClient;
 import be.sven.tesla.restclient.PollingScheduler;
 import be.sven.tesla.restclient.VehicleClient;
 import be.sven.tesla.restclient.VehicleControl;
+import be.sven.tesla.streaming.WssClientConfig;
+import com.neovisionaries.ws.client.WebSocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,8 +24,9 @@ import java.util.concurrent.ScheduledFuture;
 public class PollingSchedulerImpl implements PollingScheduler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PollingSchedulerImpl.class);
+    private static final String ONLINE = "online";
 
-    private final DataClientImpl dataClient;
+    private final DataClient dataClient;
     private final VehicleClient vehicleClient;
     private final ThreadPoolTaskScheduler scheduler;
     private final VehicleControl vehicleControl;
@@ -33,7 +34,7 @@ public class PollingSchedulerImpl implements PollingScheduler {
     private final Map<Long, PollingTask> tasks = new IdentityHashMap<>();
 
     @Autowired
-    public PollingSchedulerImpl(DataClientImpl dataClient, VehicleClient vehicleClient, @Qualifier("TaskScheduler") ThreadPoolTaskScheduler scheduler,
+    public PollingSchedulerImpl(DataClient dataClient, VehicleClient vehicleClient, @Qualifier("TaskScheduler") ThreadPoolTaskScheduler scheduler,
                                 VehicleControl vehicleControl) {
         this.dataClient = dataClient;
         this.vehicleClient = vehicleClient;
@@ -82,18 +83,17 @@ public class PollingSchedulerImpl implements PollingScheduler {
         return true;
     }
 
-    enum State {
-        ONLINE,
-        CAN_SLEEP,
-        ASLEEP
-    }
 
     class PollingTask implements Runnable {
         private final Token token;
         private final Long id;
         private boolean wakeup;
-        private State state = State.ASLEEP;
+        private VehicleStates state = new VehicleStates();
         private ScheduledFuture<?> future;
+        private ChargingState chargingState;
+        private boolean climateOn;
+        private boolean parked;
+        private WebSocket socket;
 
         public PollingTask(final Token token, final Long id, final boolean wakeup) {
             this.token = token;
@@ -119,36 +119,19 @@ public class PollingSchedulerImpl implements PollingScheduler {
 
         @Override
         public void run() {
-            if (state == State.ASLEEP && vehicleClient.isVehicleOnline(token, id)) {
-                LOGGER.info("Car was asleep and is now online;");
-                state = State.ONLINE;
-            } else if (state == State.ASLEEP && wakeup) {
-                LOGGER.info("Car is asleep and we should wake it up");
-                vehicleControl.wakeUp(token, id);
-                return; //takes 20 seconds to wake up;
-            } else if (state == State.CAN_SLEEP) {
-                LOGGER.info("The car should be able to go to sleep. Not polling for information");
-                return;
-            }
-            if (state == State.ONLINE) {
-                LOGGER.info("Was online was set to true.");
+            boolean online = vehicleClient.isVehicleOnline(token, id);
+            if (online) state.setOnline();
+            else state.setAsleep();
+            if (wakeup || state.canPollVehicle()) {
+                LOGGER.info("Polling vehicle for data.");
                 VehicleData data = dataClient.getVehicleData(token, id);
-                if (canSleep(data)) state = State.CAN_SLEEP;
+                state.setStates(data);
+                if (data != null && !data.getDriveState().isParked() && socket != null && !socket.isOpen()) {
+                    socket = new WssClientConfig().createSocket(token, id, true);
+                }
                 return;
             }
             LOGGER.info("Car is not online. Not waking it up.");
         }
-
-        private boolean canSleep(VehicleData data) {
-            ChargingState chargingState = ChargingState.valueOf(data.getChargeState().getChargingState().toUpperCase());
-            DriveState driveState = data.getDriveState();
-            boolean climateOn = data.getClimateState().isClimateOn();
-            if (!wakeup && chargingState.willNotCharge() && driveState.isParked() && !climateOn) { // need other states for charging
-                LOGGER.info("Vehicle should be able to go to sleep");
-                return true;
-            }
-            return false;
-        }
-
     }
 }
